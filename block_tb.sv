@@ -1,7 +1,7 @@
 module tb_PU;
 
 // Paraméterek
-parameter DATA_WIDTH = 8;
+parameter DATA_WIDTH = 16;
 
 // Bemenetek
 reg clk;
@@ -36,8 +36,8 @@ initial begin
     clk = 0;
     reset = 0;
     en = 0;
-    a = 8'b00000000;
-    b = 8'b00000000;
+    a = 0;
+    b = 0;
 
     // Reset szekvencia
     reset = 1;
@@ -47,25 +47,22 @@ initial begin
     
     // Engedélyezés és bemenetek állítása
     en = 1;
-    a = 8'b00000001; // a = 1
-    b = 8'b00000010; // b = 2
+    a = 1; // a = 1
+    b = 2; // b = 2
     #10;
     
-    a = 8'b00000011; // a = 3
-    b = 8'b00000001; // b = 1
+    a = 1; // a = 3
+    b = 1; // b = 1
     #10;
     
-    a = 8'b00000010; // a = 2
-    b = 8'b00000001; // b = 1
+    a = 0; // a = 2
+    b = 1; // b = 1
     #10;
     
     // Teszt leállítása
     $finish;
 end
 
-// Kimenetek figyelése
-initial begin
-    $monitor("Time = %0t, a = %b, b = %b, P = %b", $time, a, b, P);
-end
+
 
 endmodule

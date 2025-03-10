@@ -1,5 +1,5 @@
 module PU #(
-    parameter DATA_WIDTH = 8  // Paraméter, amely meghatározza a számok szélességét
+    parameter DATA_WIDTH = 16  // Paraméter, amely meghatározza a számok szélességét
 )(
     input wire clk,                  // Órajel
     input wire reset,                // Reset jel
@@ -10,20 +10,25 @@ module PU #(
 );
 
 
+
+
+
 // A kimeneti eredmény frissítése
 always @(posedge clk or posedge reset) begin
     if (reset) begin
         P <= 0;  // Reset esetén nullázza az előző állapotot
-       
+    
     end else begin 
     if (en) begin
-        P <= a * b + P;  
+     
+        
+        
+        
         
     end else begin
         P <= P;    
     end
     end
 end
-
 
 endmodule
