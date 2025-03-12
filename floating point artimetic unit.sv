@@ -14,8 +14,8 @@ reg [4:0] a_exponent, b_exponent, result_exponent;
 reg [9:0] a_fraction, b_fraction, result_fraction;
 reg a_sign, b_sign, result_sign;
 reg [21:0] product_fraction; // Szorzás után nagyobb méret kell
-reg [5:0] shift_amount; // Maximum exponenskülönbség 31 lehet, ezért 6 bit elég
-reg [11:0] extended_a_fraction, extended_b_fraction; // Mantissza + implicit 1 bit + extra hely shifteléshez
+reg [4:0] shift_amount; // Maximum exponenskülönbség 31 lehet, ezért 6 bit elég
+reg [10:0] extended_a_fraction, extended_b_fraction; // Mantissza + implicit 1 bit + extra hely shifteléshez
 reg [11:0] sum_fraction;
 
 always @(posedge clk or posedge reset) begin
@@ -31,65 +31,83 @@ always @(posedge clk or posedge reset) begin
     end else if (en) begin
        
 
-        if (dec == 0) begin
-           // **ÖSSZEADÁS**
-            
-
+       if (dec == 0) begin
+          
+            // Kitevők kiegyenlítése
             if (a_exponent > b_exponent) begin
-                result_exponent <= a_exponent;
+                result_exponent = a_exponent;
                 shift_amount = a_exponent - b_exponent;
-                extended_b_fraction = {1'b1, b_fraction} >> shift_amount; // Jobbra shift a kisebb exponenshez
-                extended_a_fraction = {1'b1, a_fraction}; // Nagyobb szám marad változatlanul
+                extended_a_fraction = {1, a_fraction}; // Mantissza implicit 1-essel
+                extended_b_fraction = {1, b_fraction} >> shift_amount; // Shifteljük a kisebb számot
             end else begin
                 result_exponent = b_exponent;
                 shift_amount = b_exponent - a_exponent;
-                extended_a_fraction = {1'b1, a_fraction} >> shift_amount; 
-                extended_b_fraction = {1'b1, b_fraction}; 
+                extended_b_fraction = {1, b_fraction};
+                extended_a_fraction = {1, a_fraction} >> shift_amount;
             end
-
-            // Mantisszák összeadása
-            if (a_sign==b_sign)begin
+        
+            // Ha az előjelek megegyeznek -> ÖSSZEADÁS
+            if (a_sign == b_sign) begin
+                if (a==0 || b==0)begin
+                    result_exponent = 0;
+                    result_fraction = 0;
+                    result_sign = 0;
+                end
+                result_sign = a_sign;
                 sum_fraction = extended_a_fraction + extended_b_fraction;
-                if (a_sign==0)begin
-                result_sign=0;
+            end 
+            // Ha az előjelek eltérnek -> KIVONÁS
+            else begin
+                if (a==b)begin
+                        result_exponent = 0;
+                        result_fraction = 0;
+                        result_sign = 0;
                 end
-                else begin
-                result_sign=1;
-                end
-            end else begin
-                if (a_sign==0)begin
-                    if (extended_a_fraction>=extended_b_fraction)begin
+                if (extended_a_fraction > extended_b_fraction) begin
                     sum_fraction = extended_a_fraction - extended_b_fraction;
-                    result_sign=0;
-                    end else begin 
-                    sum_fraction = -1*extended_a_fraction + extended_b_fraction;
-                    result_sign=1;
-                    end
-                    
+                    result_sign = a_sign;
+                end else if (extended_a_fraction < extended_b_fraction) begin
+                    sum_fraction = extended_b_fraction - extended_a_fraction;
+                    result_sign = b_sign;
                 end else begin
-                   if (extended_a_fraction>=extended_b_fraction)begin
-                    sum_fraction = extended_a_fraction - extended_b_fraction;
-                    result_sign=1;
-                    end else begin 
-                    sum_fraction = -1*extended_a_fraction + extended_b_fraction;
-                    result_sign=0;
-                    end
-                    
+                    // Ha a számok egyenlő abszolút értékűek, az eredmény 0
+                    sum_fraction = 0;
+                    result_sign = 0;
+                    result_exponent = 0;
                 end
-            end
             
-
-            // **Normalizáció**
-            if (sum_fraction[11]) begin
-                result_fraction = sum_fraction[10:1]; // Ha túlcsordul, 1 bitet le kell shiftelni
-                result_exponent = result_exponent + 1; // Kitevő növelése
+        
+            // Normalizálás
+            if (sum_fraction[11] == 1) begin
+                result_fraction = sum_fraction[11:1];         
+                result_exponent = result_exponent + 1;
             end else begin
-                result_fraction = sum_fraction[9:0]; // Normál 10 bit
+                while (sum_fraction[10] == 0 && result_exponent > 0) begin
+                    sum_fraction = sum_fraction << 1;
+                    result_exponent = result_exponent - 1;
+                end
+                result_fraction = sum_fraction[10:0];
             end
-
-            result_sign = a_sign; // Az előjel az erősebb számé marad
-
+        
+            // Underflow ellenőrzés
+            if (result_exponent <= 0) begin
+                result_exponent = 0;
+                result_fraction = 0;
+                result_sign = 0;
+            end
+    end
+                    
+                    
+               
+             
             
+                
+    
+                
+    
+               
+    
+                
         end else begin
             // *** SZORZÁS ***
             result_sign = a_sign ^ b_sign;
